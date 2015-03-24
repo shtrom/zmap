@@ -49,6 +49,7 @@ SET(OUTPUT_MODULE_SOURCES
 SET(PROBE_MODULE_SOURCES
 	probe_modules/module_icmp_echo.c
 	probe_modules/module_tcp_synscan.c
+	probe_modules/module_mptcp_synscan.c
 	probe_modules/module_udp.c
 	probe_modules/module_udp_dns.c
 	probe_modules/packet.c
