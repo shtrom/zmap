@@ -74,14 +74,26 @@ struct mp_capable {
 probe_module_t module_tcp_synscan;
 static uint32_t num_ports;
 
-/* From module_tcp_synscan.c */
-int synscan_global_initialize(struct state_conf *state);
-int synscan_init_perthread(void* buf, macaddr_t *src,
+int synscan_global_initialize_mp(struct state_conf *state)
+{
+	num_ports = state->source_port_last - state->source_port_first + 1;
+	return EXIT_SUCCESS;
+}
+
+int synscan_init_perthread_mp(void* buf, macaddr_t *src,
 		macaddr_t *gw, port_h_t dst_port,
-		__attribute__((unused)) void **arg_ptr);
-int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
-		__attribute__((unused))uint32_t *src_ip,
-		uint32_t *validation);
+		__attribute__((unused)) void **arg_ptr)
+{
+	memset(buf, 0, MAX_PACKET_SIZE);
+	struct ether_header *eth_header = (struct ether_header *) buf;
+	make_eth_header(eth_header, src, gw);
+	struct ip *ip_header = (struct ip*)(&eth_header[1]);
+	uint16_t len = htons(sizeof(struct ip) + sizeof(struct tcphdr) + sizeof(struct mp_capable)); // also reserve space for MP_CAPABLE MP-TCP option
+	make_ip_header(ip_header, IPPROTO_TCP, len);
+	struct tcphdr *tcp_header = (struct tcphdr*)(&ip_header[1]);
+	make_tcp_header(tcp_header, dst_port);
+	return EXIT_SUCCESS;
+}
 
 int synscan_make_mppacket(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 		uint32_t *validation, int probe_num, __attribute__((unused)) void *arg)
@@ -134,6 +146,11 @@ void synscan_print_mppacket(FILE *fp, void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
+/* From module_tcp_synscan.c */
+int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
+		__attribute__((unused))uint32_t *src_ip,
+		uint32_t *validation);
+
 void synscan_process_mppacket(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs)
 {
@@ -172,8 +189,8 @@ probe_module_t module_mptcp_synscan = {
 	.pcap_filter = "tcp && tcp[13] & 4 != 0 || tcp[13] == 18",
 	.pcap_snaplen = 96,
 	.port_args = 1,
-	.global_initialize = &synscan_global_initialize,
-	.thread_initialize = &synscan_init_perthread,
+	.global_initialize = &synscan_global_initialize_mp,
+	.thread_initialize = &synscan_init_perthread_mp,
 	.make_packet = &synscan_make_mppacket,
 	.print_packet = &synscan_print_mppacket,
 	.process_packet = &synscan_process_mppacket,
