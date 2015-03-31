@@ -21,6 +21,56 @@
 #include "probe_modules.h"
 #include "packet.h"
 
+#ifndef TCPOPT_MPTCP
+# define TCPOPT_MPTCP 	30
+
+#include <asm/byteorder.h>
+
+/* From <net/mptcp.h> */
+
+
+#define MPTCP_SUB_CAPABLE			0
+#define MPTCP_SUB_LEN_CAPABLE_SYN		12
+
+struct mptcp_option {
+	__u8	kind;
+	__u8	len;
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+	__u8	ver:4,
+		sub:4;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+	__u8	sub:4,
+		ver:4;
+#else
+#error	"Adjust your <asm/byteorder.h> defines"
+#endif
+};
+
+struct mp_capable {
+	__u8	kind;
+	__u8	len;
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+	__u8	ver:4,
+		sub:4;
+	__u8	h:1,
+		rsv:5,
+		b:1,
+		a:1;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+	__u8	sub:4,
+		ver:4;
+	__u8	a:1,
+		b:1,
+		rsv:5,
+		h:1;
+#else
+#error	"Adjust your <asm/byteorder.h> defines"
+#endif
+	__u64	sender_key;
+	__u64	receiver_key;
+} __attribute__((__packed__));
+#endif /* TCPOPT_MPTCP */
+
 probe_module_t module_tcp_synscan;
 static uint32_t num_ports;
 
@@ -39,6 +89,7 @@ int synscan_make_mppacket(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);
 	struct tcphdr *tcp_header = (struct tcphdr*)(&ip_header[1]);
+	struct mp_capable *mpc = (struct mp_capable*)(&tcp_header[1]);
 	uint32_t tcp_seq = validation[0];
 
 	ip_header->ip_src.s_addr = src_ip;
@@ -49,7 +100,17 @@ int synscan_make_mppacket(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	tcp_header->th_seq = tcp_seq;
 	tcp_header->th_sum = 0;
 
-	tcp_header->th_sum = tcp_checksum(sizeof(struct tcphdr),
+	mpc->kind = TCPOPT_MPTCP;
+	mpc->sender_key = 0xBEEFFEDBADC00FEE;
+	mpc->len = MPTCP_SUB_LEN_CAPABLE_SYN;
+	mpc->sub = MPTCP_SUB_CAPABLE;
+	mpc->ver = 0;
+	mpc->a = 0; /* Don't care about the checksum */
+	mpc->b = 0;
+	mpc->rsv = 0;
+	mpc->h = 1;
+
+	tcp_header->th_sum = tcp_checksum(sizeof(struct tcphdr) + sizeof(struct mp_capable),
 			ip_header->ip_src.s_addr, ip_header->ip_dst.s_addr, tcp_header);
 
 	ip_header->ip_sum = 0;
@@ -107,7 +168,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_mptcp_synscan = {
 	.name = "mptcp_synscan",
-	.packet_length = 60,
+	.packet_length = 66,
 	.pcap_filter = "tcp && tcp[13] & 4 != 0 || tcp[13] == 18",
 	.pcap_snaplen = 96,
 	.port_args = 1,
