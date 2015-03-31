@@ -67,7 +67,7 @@ struct mp_capable {
 #error	"Adjust your <asm/byteorder.h> defines"
 #endif
 	__u64	sender_key;
-	__u64	receiver_key;
+  __u64	receiver_key;
 } __attribute__((__packed__));
 #endif /* TCPOPT_MPTCP */
 
@@ -88,10 +88,11 @@ int synscan_init_perthread_mp(void* buf, macaddr_t *src,
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct ip) + sizeof(struct tcphdr) + sizeof(struct mp_capable)); // also reserve space for MP_CAPABLE MP-TCP option
+	uint16_t len = htons(sizeof(struct ip) + sizeof(struct tcphdr) + MPTCP_SUB_LEN_CAPABLE_SYN); // also reserve space for MP_CAPABLE MP-TCP option
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr*)(&ip_header[1]);
 	make_tcp_header(tcp_header, dst_port);
+	tcp_header->th_off += MPTCP_SUB_LEN_CAPABLE_SYN / 4; // adjust data offset
 	return EXIT_SUCCESS;
 }
 
@@ -122,7 +123,7 @@ int synscan_make_mppacket(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	mpc->rsv = 0;
 	mpc->h = 1;
 
-	tcp_header->th_sum = tcp_checksum(sizeof(struct tcphdr) + sizeof(struct mp_capable),
+	tcp_header->th_sum = tcp_checksum(sizeof(struct tcphdr) + MPTCP_SUB_LEN_CAPABLE_SYN,
 			ip_header->ip_src.s_addr, ip_header->ip_dst.s_addr, tcp_header);
 
 	ip_header->ip_sum = 0;
@@ -146,10 +147,34 @@ void synscan_print_mppacket(FILE *fp, void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-/* From module_tcp_synscan.c */
-int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
+int synscan_validate_mppacket(const struct ip *ip_hdr, uint32_t len,
 		__attribute__((unused))uint32_t *src_ip,
-		uint32_t *validation);
+		uint32_t *validation)
+{
+	if (ip_hdr->ip_p != IPPROTO_TCP) {
+		return 0;
+	}
+	if ((4*ip_hdr->ip_hl + sizeof(struct tcphdr)) > len) {
+		// buffer not large enough to contain expected tcp header
+		return 0;
+	}
+	struct tcphdr *tcp = (struct tcphdr*)((char *) ip_hdr + 4*ip_hdr->ip_hl);
+	uint16_t sport = tcp->th_sport;
+	uint16_t dport = tcp->th_dport;
+	// validate source port
+	if (ntohs(sport) != zconf.target_port) {
+		return 0;
+	}
+	// validate destination port
+	if (!check_dst_port(ntohs(dport), num_ports, validation)) {
+		return 0;
+	}
+	// validate tcp acknowledgement number
+	if (htonl(tcp->th_ack) != htonl(validation[0])+1) {
+		return 0;
+	}
+	return 1;
+}
 
 void synscan_process_mppacket(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs)
@@ -194,7 +219,7 @@ probe_module_t module_mptcp_synscan = {
 	.make_packet = &synscan_make_mppacket,
 	.print_packet = &synscan_print_mppacket,
 	.process_packet = &synscan_process_mppacket,
-	.validate_packet = &synscan_validate_packet,
+	.validate_packet = &synscan_validate_mppacket,
 	.close = NULL,
 
 	.helptext = "Probe module that sends a TCP SYN packet with an MP_CAPABLE"
