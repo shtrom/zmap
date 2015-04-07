@@ -7,7 +7,7 @@
  */
 
 // probe module for performing TCP SYN scans with the MP_CAPABLE MP-TCP option
-// Authors: Olivier Mehani <olivier.mehani@nicta.com.au>
+// Authors: Simone Ferlin-Oliveira <simone.ferlin@nicta.com.au>, Olivier Mehani <olivier.mehani@nicta.com.au>
 
 #include <stdlib.h>
 #include <stdio.h>
