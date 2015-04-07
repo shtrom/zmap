@@ -1,0 +1,40 @@
+Source: zmap
+Section: net
+Priority: optional
+Maintainer: Olivier Mehani <olivier.mehani@nicta.com.au>
+Build-Depends: debhelper (>= 9), cmake
+Standards-Version: 3.9.5
+Homepage: https://zmap.io/ https://ext.npc.nicta.com.au/projects/mptcpscan/
+#Vcs-Git: git://anonscm.debian.org/collab-maint/zmap.git
+#Vcs-Browser: http://anonscm.debian.org/?p=collab-maint/zmap.git;a=summary
+
+Package: zmap
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Open-source network scanner with MP-TCP scanning support
+ ZMap is an open-source network scanner that enapbles researchers to easily
+ perform Internet-wide network studies. With a single machine and a well
+ provisioned network uplink, ZMap is capable of performing a complete scan of
+ the IPv4 address space in under 5 minutes, approaching the theoretical limit of
+ ten gigabit Ethernet.
+ .
+ ZMap can be used to study protocol adoption over time, monitor service
+ availability, and help us better understand large systems distributed across
+ the Internet.
+ .
+ This version contains a patchset enabling to scan for MP-TCP-enabled hosts.
+
+Package: zmap-doc
+Architecture: all
+Description: documentation for zmap
+ ZMap is an open-source network scanner that enapbles researchers to easily
+ perform Internet-wide network studies. With a single machine and a well
+ provisioned network uplink, ZMap is capable of performing a complete scan of
+ the IPv4 address space in under 5 minutes, approaching the theoretical limit of
+ ten gigabit Ethernet.
+ .
+ ZMap can be used to study protocol adoption over time, monitor service
+ availability, and help us better understand large systems distributed across
+ the Internet.
+ .
+ This version contains a patchset enabling to scan for MP-TCP-enabled hosts.

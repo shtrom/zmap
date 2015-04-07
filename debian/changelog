@@ -1,0 +1,6 @@
+zmap (1.1.2+mptcp-1) unstable; urgency=low
+
+  * Initial release, packaged for local installation on scanning
+    infrastructure
+
+ -- Olivier Mehani <olivier.mehani@nicta.com.au>  Tue, 07 Apr 2015 15:43:49 +1000
