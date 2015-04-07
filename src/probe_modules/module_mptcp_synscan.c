@@ -22,29 +22,14 @@
 #include "packet.h"
 
 #ifndef TCPOPT_MPTCP
-# define TCPOPT_MPTCP 	30
+#define TCPOPT_MPTCP 	30
 
 #include <asm/byteorder.h>
 
 /* From <net/mptcp.h> */
-
-
 #define MPTCP_SUB_CAPABLE			0
 #define MPTCP_SUB_LEN_CAPABLE_SYN		12
-
-struct mptcp_option {
-	__u8	kind;
-	__u8	len;
-#if defined(__LITTLE_ENDIAN_BITFIELD)
-	__u8	ver:4,
-		sub:4;
-#elif defined(__BIG_ENDIAN_BITFIELD)
-	__u8	sub:4,
-		ver:4;
-#else
-#error	"Adjust your <asm/byteorder.h> defines"
-#endif
-};
+#define MPTCP_SUB_LEN_CAPABLE_ACK		20
 
 struct mp_capable {
 	__u8	kind;
@@ -67,8 +52,9 @@ struct mp_capable {
 #error	"Adjust your <asm/byteorder.h> defines"
 #endif
 	__u64	sender_key;
-  __u64	receiver_key;
+	__u64	receiver_key;
 } __attribute__((__packed__));
+
 #endif /* TCPOPT_MPTCP */
 
 probe_module_t module_tcp_synscan;
@@ -173,7 +159,28 @@ int synscan_validate_mppacket(const struct ip *ip_hdr, uint32_t len,
 	if (htonl(tcp->th_ack) != htonl(validation[0])+1) {
 		return 0;
 	}
-	return 1;
+
+	// now make sure a MP_CAPABLE is present
+	int option_bytes = 4 * tcp->th_off - sizeof(struct tcphdr);
+	char *cur = (char*)(&tcp[1]);
+	char *end = cur + option_bytes;
+	while (cur < end) {
+		struct mp_capable *mpcapable = (struct mp_capable *)cur;
+		cur += mpcapable->len;
+
+		if (mpcapable->kind != TCPOPT_MPTCP || mpcapable->sub != MPTCP_SUB_CAPABLE)
+		continue;
+
+		/* We only support MPTCP version 0 */
+		if (mpcapable->ver != 0)
+			continue;
+
+		// can accept this MP_CAPABLE!
+		return 1;
+	}
+
+	// no MP_CAPABLE found
+	return 0;
 }
 
 void synscan_process_mppacket(const u_char *packet,
@@ -210,7 +217,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_mptcp_synscan = {
 	.name = "mptcp_synscan",
-	.packet_length = 66,
+	.packet_length = 54 + MPTCP_SUB_LEN_CAPABLE_SYN,
 	.pcap_filter = "tcp && tcp[13] & 4 != 0 || tcp[13] == 18",
 	.pcap_snaplen = 96,
 	.port_args = 1,
