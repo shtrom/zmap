@@ -160,27 +160,7 @@ int synscan_validate_mppacket(const struct ip *ip_hdr, uint32_t len,
 		return 0;
 	}
 
-	// now make sure a MP_CAPABLE is present
-	int option_bytes = 4 * tcp->th_off - sizeof(struct tcphdr);
-	char *cur = (char*)(&tcp[1]);
-	char *end = cur + option_bytes;
-	while (cur < end) {
-		struct mp_capable *mpcapable = (struct mp_capable *)cur;
-		cur += mpcapable->len;
-
-		if (mpcapable->kind != TCPOPT_MPTCP || mpcapable->sub != MPTCP_SUB_CAPABLE)
-		continue;
-
-		/* We only support MPTCP version 0 */
-		if (mpcapable->ver != 0)
-			continue;
-
-		// can accept this MP_CAPABLE!
-		return 1;
-	}
-
-	// no MP_CAPABLE found
-	return 0;
+	return 1;
 }
 
 void synscan_process_mppacket(const u_char *packet,
@@ -203,6 +183,28 @@ void synscan_process_mppacket(const u_char *packet,
 		fs_add_string(fs, "classification", (char*) "synack", 0);
 		fs_add_uint64(fs, "success", 1);
 	}
+
+	// now make sure a MP_CAPABLE is present
+	int option_bytes = 4 * tcp->th_off - sizeof(struct tcphdr);
+	char *cur = (char*)(&tcp[1]);
+	char *end = cur + option_bytes;
+	int mp_capable = 0;
+
+	while (cur < end) {
+		struct mp_capable *mpcapable = (struct mp_capable *)cur;
+		cur += mpcapable->len;
+
+		if (mpcapable->kind != TCPOPT_MPTCP || mpcapable->sub != MPTCP_SUB_CAPABLE) {
+			continue;
+		} else if (mpcapable->ver != 0) { /* We only support MPTCP version 0 */
+			continue;
+		}
+
+		// can accept this MP_CAPABLE!
+		mp_capable = 1;
+	}
+
+	fs_add_uint64(fs, "success", mp_capable);
 }
 
 static fielddef_t fields[] = {
@@ -212,7 +214,8 @@ static fielddef_t fields[] = {
 	{.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
 	{.name = "window", .type = "int", .desc = "TCP window"},
 	{.name = "classification", .type="string", .desc = "packet classification"},
-	{.name = "success", .type="int", .desc = "is response considered success"}
+	{.name = "success", .type="int", .desc = "is response considered success"},
+	{.name = "mp_capable", .type="int", .desc = "is destination MP-TCP capable"},
 };
 
 probe_module_t module_mptcp_synscan = {
@@ -235,5 +238,5 @@ probe_module_t module_mptcp_synscan = {
 		"reset packet is considered a failed response.",
 
 	.fields = fields,
-	.numfields = 7};
+	.numfields = 8};
 
