@@ -175,8 +175,8 @@ void synscan_process_mppacket(const u_char *packet,
 	fs_add_uint64(fs, "seqnum", (uint64_t) ntohl(tcp->th_seq));
 	fs_add_uint64(fs, "acknum", (uint64_t) ntohl(tcp->th_ack));
 	fs_add_uint64(fs, "window", (uint64_t) ntohs(tcp->th_win));
-	// this is for debugging:
-	fs_add_uint64(fs, "data_offset", (uint64_t) ntohs(tcp->th_off));
+	int data_offset = (uint64_t) tcp->th_off;
+	fs_add_uint64(fs, "data_offset", data_offset);
 
 	if (tcp->th_flags & TH_RST) { // RST packet
 		fs_add_string(fs, "classification", (char*) "rst", 0);
@@ -191,26 +191,32 @@ void synscan_process_mppacket(const u_char *packet,
 	// The offset is in 32-bit words, so we multiply by 4 to get
 	// number of bytes. Minus the length of TCP hdr, we get the
 	// length of the options
-	int option_bytes = 4 * tcp->th_off - sizeof(struct tcphdr);
-	char *cur = (char*)(&tcp[1]);
-	char *end = cur + option_bytes;
-	int mp_capable = 0;
 
-	while (cur < end) {
-		struct mp_capable *mpcapable = (struct mp_capable *)cur;
-		cur += mpcapable->len;
+	if (data_offset > 7) {
+		int option_bytes = 4 * tcp->th_off - sizeof(struct tcphdr);
+		char *cur = (char*)(&tcp[1]);
+		char *end = cur + option_bytes;
+		int mp_capable = 0;
 
-		if (mpcapable->kind != TCPOPT_MPTCP || mpcapable->sub != MPTCP_SUB_CAPABLE) {
-			continue;
-		} else if (mpcapable->ver != 0) { /* We only support MPTCP version 0 */
-			continue;
+		while (cur < end) {
+			struct mp_capable *mpcapable = (struct mp_capable *)cur;
+			cur += mpcapable->len;
+
+			if (mpcapable->kind != TCPOPT_MPTCP || mpcapable->sub != MPTCP_SUB_CAPABLE) {
+				continue;
+			} else if (mpcapable->ver != 0) { // We only support MPTCP version 0
+				continue;
+			}
+
+			// can accept this MP_CAPABLE!
+			mp_capable = 1;
 		}
 
-		// can accept this MP_CAPABLE!
-		mp_capable = 1;
+		fs_add_uint64(fs, "mp_capable", mp_capable);
 	}
-
-	fs_add_uint64(fs, "mp_capable", mp_capable);
+	else {
+		fs_add_uint64(fs, "mp_capable", -1);
+	}
 }
 
 static fielddef_t fields[] = {
@@ -219,9 +225,9 @@ static fielddef_t fields[] = {
 	{.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
 	{.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
 	{.name = "window", .type = "int", .desc = "TCP window"},
+	{.name = "data_offset", .type="int", .desc = "data offset in TCP reply header"},
 	{.name = "classification", .type="string", .desc = "packet classification"},
 	{.name = "success", .type="int", .desc = "is response considered success"},
-	{.name = "data_offset", .type="int", .desc = "data offset in TCP reply header"},
 	{.name = "mp_capable", .type="int", .desc = "is destination MP-TCP capable"},
 };
 
@@ -245,5 +251,5 @@ probe_module_t module_mptcp_synscan = {
 		"reset packet is considered a failed response.",
 
 	.fields = fields,
-	.numfields = 8};
+	.numfields = 9};
 
