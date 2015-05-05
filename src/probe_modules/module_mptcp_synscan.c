@@ -175,6 +175,8 @@ void synscan_process_mppacket(const u_char *packet,
 	fs_add_uint64(fs, "seqnum", (uint64_t) ntohl(tcp->th_seq));
 	fs_add_uint64(fs, "acknum", (uint64_t) ntohl(tcp->th_ack));
 	fs_add_uint64(fs, "window", (uint64_t) ntohs(tcp->th_win));
+	// this is for debugging:
+	fs_add_uint64(fs, "data_offset", (uint64_t) ntohs(tcp->th_off));
 
 	if (tcp->th_flags & TH_RST) { // RST packet
 		fs_add_string(fs, "classification", (char*) "rst", 0);
@@ -185,6 +187,10 @@ void synscan_process_mppacket(const u_char *packet,
 	}
 
 	// now make sure a MP_CAPABLE is present
+
+	// The offset is in 32-bit words, so we multiply by 4 to get
+	// number of bytes. Minus the length of TCP hdr, we get the
+	// length of the options
 	int option_bytes = 4 * tcp->th_off - sizeof(struct tcphdr);
 	char *cur = (char*)(&tcp[1]);
 	char *end = cur + option_bytes;
@@ -204,7 +210,7 @@ void synscan_process_mppacket(const u_char *packet,
 		mp_capable = 1;
 	}
 
-	fs_add_uint64(fs, "success", mp_capable);
+	fs_add_uint64(fs, "mp_capable", mp_capable);
 }
 
 static fielddef_t fields[] = {
@@ -215,6 +221,7 @@ static fielddef_t fields[] = {
 	{.name = "window", .type = "int", .desc = "TCP window"},
 	{.name = "classification", .type="string", .desc = "packet classification"},
 	{.name = "success", .type="int", .desc = "is response considered success"},
+	{.name = "data_offset", .type="int", .desc = "data offset in TCP reply header"},
 	{.name = "mp_capable", .type="int", .desc = "is destination MP-TCP capable"},
 };
 
