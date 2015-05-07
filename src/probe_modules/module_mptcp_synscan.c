@@ -215,7 +215,7 @@ void synscan_process_mppacket(const u_char *packet,
 		fs_add_uint64(fs, "mp_capable", mp_capable);
 	}
 	else {
-		fs_add_uint64(fs, "mp_capable", -1);
+		fs_add_uint64(fs, "mp_capable", 2);
 	}
 }
 
