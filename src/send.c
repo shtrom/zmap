@@ -33,6 +33,9 @@
 #include "state.h"
 #include "validate.h"
 
+// Scary additions by Ralph START
+#include <inttypes.h>
+
 // OS specific functions called by send_run
 static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
 static inline int send_run_init(sock_t sock);
@@ -238,6 +241,8 @@ int send_run(sock_t st, shard_t *s)
      * THIS HERE IS THE POSITION TO DO THE FAST-FORWARD FOR IP ADDRESSES
      */
 	uint32_t curr = shard_get_cur_ip(s);
+    printf("Ready for some FUN!\n");
+    printf("%" PRIu32 "\n", curr);
 	int attempts = zconf.num_retries + 1;
 	uint32_t idx = 0;
 	while (1) {
