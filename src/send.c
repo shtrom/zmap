@@ -234,6 +234,9 @@ int send_run(sock_t st, shard_t *s)
 		    last_time = now();
         }
 	}
+    /*
+     * THIS HERE IS THE POSITION TO DO THE FAST-FORWARD FOR IP ADDRESSES
+     */
 	uint32_t curr = shard_get_cur_ip(s);
 	int attempts = zconf.num_retries + 1;
 	uint32_t idx = 0;
