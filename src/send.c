@@ -33,8 +33,9 @@
 #include "state.h"
 #include "validate.h"
 
-// Scary additions by Ralph START
+// RALPH
 #include <inttypes.h>
+extern uint32_t LAST_IP;
 
 // OS specific functions called by send_run
 static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
@@ -176,6 +177,8 @@ static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 // one sender thread
 int send_run(sock_t st, shard_t *s)
 {
+    // RALPH
+    // printf("Entered once.\n");
 	log_trace("send", "send thread started");
 	pthread_mutex_lock(&send_mutex);
 	// Allocate a buffer to hold the outgoing packet
@@ -237,12 +240,18 @@ int send_run(sock_t st, shard_t *s)
 		    last_time = now();
         }
 	}
+    // RALPH
     /*
      * THIS HERE IS THE POSITION TO DO THE FAST-FORWARD FOR IP ADDRESSES
      */
 	uint32_t curr = shard_get_cur_ip(s);
+    // RALPH
+    // Store the IP in LAST_IP
+    LAST_IP = curr;
     printf("Ready for some FUN!\n");
     printf("%" PRIu32 "\n", curr);
+
+
 	int attempts = zconf.num_retries + 1;
 	uint32_t idx = 0;
 	while (1) {
@@ -325,6 +334,9 @@ int send_run(sock_t st, shard_t *s)
 		}
 
 		curr = shard_get_next_ip(s);
+        // RALPH
+        // Store last IP
+        LAST_IP = curr;
 	}
 	if (zconf.dryrun) {
 		lock_file(stdout);

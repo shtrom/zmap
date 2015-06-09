@@ -55,6 +55,14 @@ static int32_t distrib_func(pfring_zc_pkt_buff *pkt, void *arg) {
 }
 #endif
 
+// RALPH
+uint32_t LAST_IP;
+
+// RALPH
+// Use this if you want to switch on support for threads (but not shards)
+// unint_32t* LAST_IPS;
+
+
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct send_arg {
