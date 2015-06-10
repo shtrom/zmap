@@ -46,6 +46,9 @@
 #include "output_modules/output_modules.h"
 #include "probe_modules/probe_modules.h"
 
+#include <signal.h>
+#include <inttypes.h>
+
 #ifdef PFRING
 #include <pfring_zc.h>
 static int32_t distrib_func(pfring_zc_pkt_buff *pkt, void *arg) {
@@ -58,9 +61,9 @@ static int32_t distrib_func(pfring_zc_pkt_buff *pkt, void *arg) {
 // RALPH
 uint32_t LAST_IP;
 int EXIT_REQUESTED = 0;
-static void exit_requested()
+static void exit_requested_handler()
 {
-	EXIT_REQUESTED = 1; 
+	EXIT_REQUESTED = 1;
 }
 
 
@@ -299,7 +302,7 @@ static void start_zmap(void)
 #ifdef PFRING
 	pfring_zc_destroy_cluster(zconf.pf.cluster);
 #endif
-	log_info("zmap", "completed");
+    log_info("zmap", "completed");
 }
 
 #define SET_IF_GIVEN(DST,ARG) \
@@ -884,10 +887,37 @@ int main(int argc, char *argv[])
 				strerror(errno));
 	}
 #endif
+
+    // Install signal handler
+    // All we want to do it set the EXIT_REQUESTED flag in peace, so we 
+    // try to mask all signals except the ones the system does not allow
+    // us to mask anyway.
+    struct sigaction exit_request_action;
+    sigset_t block_mask;
+    sigfillset(&block_mask);
+    exit_request_action.sa_handler = exit_requested_handler;
+    exit_request_action.sa_mask = block_mask;
+    sigaction(SIGINT, &exit_request_action, NULL);
+    sigaction(SIGHUP, &exit_request_action, NULL);
+    sigaction(SIGPIPE, &exit_request_action, NULL);
+    
+
 	start_zmap();
+    // If we had to abort due to a signal, we write the last good IP to file
+    // Since we've already dropped privileges, we need to write to /tmp.
+    FILE *fp;
+    if (EXIT_REQUESTED)
+    {
+        fp = fopen("/tmp/last_ip_abnormal", "w");
+    }
+    else
+    {
+        fp = fopen("/tmp/last_ip", "w");
+    }
+    fprintf(fp, "%" PRIu32 "\n", LAST_IP);
+    fclose(fp);
 
 	fclose(log_location);
-
 	cmdline_parser_free(&args);
 	free(params);
 	return EXIT_SUCCESS;
