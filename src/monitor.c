@@ -29,6 +29,8 @@
 #define UPDATE_INTERVAL 1 //seconds
 #define NUMBER_STR_LEN 20
 
+extern int EXIT_REQUESTED;
+
 // internal monitor status that is used to track deltas
 typedef struct internal_scan_status {
 	double   last_now;
@@ -390,7 +392,7 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 		f = init_status_update_file(zconf.status_updates_file);
 	}
 
-	while (!(zsend.complete && zrecv.complete)) {
+	while (!(zsend.complete && zrecv.complete) && !EXIT_REQUESTED) {
 		update_pcap_stats(lock);
 		export_stats(internal_status, export_status, it);
 		log_drop_warnings(export_status);

@@ -24,6 +24,8 @@
 #include "probe_modules/probe_modules.h"
 #include "output_modules/output_modules.h"
 
+extern int EXIT_REQUESTED;
+
 static u_char fake_eth_hdr[65535];
 
 // bitmap of observed IP addresses
@@ -165,7 +167,10 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 				break;
 			}
 		}
-	} while (!(zsend.complete && (now()-zsend.finish > zconf.cooldown_secs)));
+	} while (!(zsend.complete && (now()-zsend.finish > zconf.cooldown_secs))
+             &&
+             !EXIT_REQUESTED
+            );
 	zrecv.finish = now();
 	// get final pcap statistics before closing
 	recv_update_stats();

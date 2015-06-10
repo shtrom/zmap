@@ -36,7 +36,7 @@
 // RALPH
 #include <inttypes.h>
 extern uint32_t LAST_IP;
-
+extern int EXIT_REQUESTED;
 // OS specific functions called by send_run
 static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
 static inline int send_run_init(sock_t sock);
@@ -242,7 +242,7 @@ int send_run(sock_t st, shard_t *s)
 
 	int attempts = zconf.num_retries + 1;
 	uint32_t idx = 0;
-	while (1) {
+	while (!EXIT_REQUESTED) {
 		// adaptive timing delay
 		if (delay > 0) {
 			count++;
