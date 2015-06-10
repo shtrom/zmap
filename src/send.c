@@ -34,7 +34,7 @@
 #include "validate.h"
 
 // RALPH
-#include <inttypes.h>
+// #include <inttypes.h>
 extern uint32_t LAST_IP;
 extern int EXIT_REQUESTED;
 // OS specific functions called by send_run
@@ -178,7 +178,6 @@ static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 int send_run(sock_t st, shard_t *s)
 {
     // RALPH
-    // printf("Entered once.\n");
 	log_trace("send", "send thread started");
 	pthread_mutex_lock(&send_mutex);
 	// Allocate a buffer to hold the outgoing packet
@@ -248,8 +247,6 @@ int send_run(sock_t st, shard_t *s)
     // RALPH
     // Store the IP in LAST_IP
     LAST_IP = curr;
-    printf("Ready for some FUN!\n");
-    printf("%" PRIu32 "\n", curr);
 
 
 	int attempts = zconf.num_retries + 1;
