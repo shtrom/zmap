@@ -57,6 +57,12 @@ static int32_t distrib_func(pfring_zc_pkt_buff *pkt, void *arg) {
 
 // RALPH
 uint32_t LAST_IP;
+int EXIT_REQUESTED = 0;
+static void exit_requested()
+{
+	EXIT_REQUESTED = 1; 
+}
+
 
 // RALPH
 // Use this if you want to switch on support for threads (but not shards)
