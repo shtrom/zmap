@@ -37,6 +37,8 @@
 // #include <inttypes.h>
 extern uint32_t LAST_IP;
 extern int EXIT_REQUESTED;
+extern int FFWD_SUCCESS;
+extern uint32_t FFWD_IP;
 // OS specific functions called by send_run
 static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
 static inline int send_run_init(sock_t sock);
@@ -229,10 +231,20 @@ int send_run(sock_t st, shard_t *s)
 	}
     // RALPH
     /*
-     * THIS HERE IS THE POSITION TO DO THE FAST-FORWARD FOR IP ADDRESSES
+     * Fast-forward to given IP
+     * Note that we need to interpret the EXIT_REQUEST flag as well here,
+     * otherwise a thread would not shut down gracefully.
      */
 	uint32_t curr = shard_get_cur_ip(s);
-    // RALPH
+    if (zconf.use_ffwd) {
+        log_info("send", "Fast-forwarding to IP");
+        if (curr != FFWD_IP) {
+            while (curr != FFWD_IP && !EXIT_REQUESTED) {
+                curr = shard_get_next_ip(s);
+            }
+        }
+        FFWD_SUCCESS = 1;
+    }
     // Store the IP in LAST_IP
     LAST_IP = curr;
 
