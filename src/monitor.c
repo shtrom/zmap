@@ -29,6 +29,7 @@
 #define UPDATE_INTERVAL 1 //seconds
 #define NUMBER_STR_LEN 20
 
+extern int FFWD_SUCCESS;
 extern int EXIT_REQUESTED;
 
 // internal monitor status that is used to track deltas
@@ -391,6 +392,10 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 	if (zconf.status_updates_file) {
 		f = init_status_update_file(zconf.status_updates_file);
 	}
+   
+    while (FFWD_SUCCESS != 1) {
+        log_debug("monitor", "Waiting for fast-forward to end.");
+    }
 
 	while (!(zsend.complete && zrecv.complete) && !EXIT_REQUESTED) {
 		update_pcap_stats(lock);
