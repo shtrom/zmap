@@ -59,6 +59,11 @@ static int32_t distrib_func(pfring_zc_pkt_buff *pkt, void *arg) {
 #endif
 
 // RALPH
+uint32_t FFWD_IP;
+int FFWD_SUCCESS = 0;
+// TODO: use an array of supplied IPs instead
+// uint32_t* FFWD_IP;
+
 uint32_t LAST_IP;
 int EXIT_REQUESTED = 0;
 static void exit_requested_handler()
@@ -524,6 +529,7 @@ int main(int argc, char *argv[])
 		zconf.output_filter_str = args.output_filter_arg;
 	}
 
+
 	SET_BOOL(zconf.dryrun, dryrun);
 	SET_BOOL(zconf.quiet, quiet);
 	SET_BOOL(zconf.ignore_invalid_hosts, ignore_invalid_hosts);
@@ -681,6 +687,17 @@ int main(int argc, char *argv[])
 	} else {
 		zconf.aes = aesrand_init_from_random();
 	}
+    
+    // Check for the fast-forward option
+    if (args.ffwd_given) {
+        if (args.sender_threads_given) {
+            if (args.sender_threads_arg > 1) {
+                log_fatal("zmap", "Option ffwd cannot be used together with more than one thread.");
+            }
+        }
+        zconf.ffwd = args.ffwd_arg;
+        zconf.use_ffwd = 1;
+    }
 
 	// Set up sharding
 	zconf.shard_num = 0;
