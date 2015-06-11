@@ -127,6 +127,8 @@ struct state_conf {
 		pfring_zc_buffer_pool *prefetches;
 	} pf;
 #endif
+    char *ffwd;
+    int use_ffwd;
 };
 extern struct state_conf zconf;
 
