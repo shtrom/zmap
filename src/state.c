@@ -62,7 +62,9 @@ struct state_conf zconf = {
     .notes = NULL,
     .custom_metadata_str = NULL,
 #endif
-	.recv_ready = 0
+	.recv_ready = 0,
+    .ffwd = NULL,
+    .use_ffwd = 0
 };
 
 // global sender stats and defaults
