@@ -32,6 +32,7 @@
 #include "shard.h"
 #include "state.h"
 #include "validate.h"
+#include <inttypes.h>
 
 // RALPH
 // #include <inttypes.h>
@@ -238,13 +239,14 @@ int send_run(sock_t st, shard_t *s)
 	uint32_t curr = shard_get_cur_ip(s);
     if (zconf.use_ffwd) {
         log_info("send", "Fast-forwarding to IP");
-        if (curr != FFWD_IP) {
-            while (curr != FFWD_IP && !EXIT_REQUESTED) {
-                curr = shard_get_next_ip(s);
-            }
+        while (curr != zconf.ffwd && !EXIT_REQUESTED) {
+            curr = shard_get_next_ip(s);
+            //printf("Trying %" PRIu32 " with input %" PRIu32 "\n", curr, zconf.ffwd);
         }
-        FFWD_SUCCESS = 1;
+        log_info("send", "Fast-forward complete");
     }
+    FFWD_SUCCESS = 1;
+
     // Store the IP in LAST_IP
     LAST_IP = curr;
 

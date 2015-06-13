@@ -62,7 +62,7 @@ struct state_conf zconf = {
     .custom_metadata_str = NULL,
 #endif
 	.recv_ready = 0,
-    .ffwd = NULL,
+    .ffwd = 0,
     .use_ffwd = 0
 };
 
