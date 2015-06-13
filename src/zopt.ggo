@@ -68,7 +68,7 @@ option "shard"                  - "Set which shard this scan is (0 indexed)"
     default="0"
 option "ffwd"                   - "Fast-forward to given IP and scan from there"
     typestr="ip"
-    optional string 
+    optional int 
 
 section "Network options"
 
