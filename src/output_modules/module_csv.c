@@ -98,6 +98,7 @@ int csv_process(fieldset_t *fs)
 		}
 	}
 	fprintf(file, "\n");
+    fflush(file);
 	return EXIT_SUCCESS;
 }
 
