@@ -694,7 +694,7 @@ int main(int argc, char *argv[])
             log_fatal("zmap", "Option ffwd cannot be used together with more than one thread.");
         }
         zconf.ffwd = args.ffwd_arg;
-        printf("Trying %" PRIu32 "\n", args.ffwd_arg);
+        log_info("zmap", "Set to fast-forward.");
         zconf.use_ffwd = 1;
     }
 
